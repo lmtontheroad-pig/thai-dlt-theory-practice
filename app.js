@@ -57,6 +57,7 @@
   let store = loadStore();
   let session = null;
   let examInterval = null;
+  let practiceAutoAdvanceTimer = null;
   let lastExamWrongIds = [];
   let searchResultIds = [];
   let issueReports = [];
@@ -369,10 +370,26 @@
     }
   }
 
+  function clearPracticeAutoAdvance() {
+    if (practiceAutoAdvanceTimer) window.clearTimeout(practiceAutoAdvanceTimer);
+    practiceAutoAdvanceTimer = null;
+  }
+
+  function schedulePracticeAutoAdvance(questionId) {
+    clearPracticeAutoAdvance();
+    const scheduledSession = session;
+    practiceAutoAdvanceTimer = window.setTimeout(() => {
+      practiceAutoAdvanceTimer = null;
+      if (session !== scheduledSession || session?.exam || session?.queue[session.index] !== questionId || session?.results[questionId]?.correct !== true) return;
+      navigateQuestion(1);
+    }, 650);
+  }
+
   function showDashboard(force = false) {
     if (!force && session?.exam && !session.completed && Object.keys(session.answers).length > 0) {
       if (!window.confirm("模拟考试尚未提交，返回后本次答题将不会保存。确定离开吗？")) return false;
     }
+    clearPracticeAutoAdvance();
     stopExamTimer();
     session = null;
     elements.quiz.classList.add("hidden");
@@ -391,6 +408,7 @@
     if (session?.exam && !session.completed && Object.keys(session.answers).length > 0) {
       if (!window.confirm("开始其他练习会放弃当前模拟考试，确定继续吗？")) return;
     }
+    clearPracticeAutoAdvance();
     stopExamTimer();
 
     let queue = [];
@@ -587,7 +605,7 @@
     elements.finishExam.classList.toggle("hidden", !session.exam);
     elements.examTimer.classList.toggle("hidden", !session.exam);
     elements.examNavigatorCard.classList.toggle("hidden", !session.exam);
-    elements.modeTip.textContent = session.exam ? "A/B/C/D位置固定，选项内容每轮随机；考试期间只保存选择。" : "A/B/C/D位置固定，选项内容每轮随机且本轮保持稳定。";
+    elements.modeTip.textContent = session.exam ? "数字键选择后保存答案并自动下一题；最后一题仍需手动提交试卷。" : "答对后自动下一题；答错会停留并显示正确答案，需要手动下一题。";
     updateSessionStats();
     if (session.exam) renderExamNavigator();
   }
@@ -622,15 +640,15 @@
   }
 
   function answerQuestion(key) {
-    if (!session) return;
+    if (!session) return false;
     const id = session.queue[session.index];
     const question = questionById.get(id);
     if (session.exam) {
       session.answers[id] = key;
       renderQuestion();
-      return;
+      return true;
     }
-    if (session.results[id]) return;
+    if (session.results[id]) return false;
     let correct = null;
     const sourceKey = sourceKeyForDisplay(question, key);
     if (question.answer_status === "confirmed" && question.correct_answer) correct = sourceKey === question.correct_answer;
@@ -642,10 +660,13 @@
     saveStore();
     renderQuestion();
     renderDashboard();
+    if (correct === true) schedulePracticeAutoAdvance(id);
+    return true;
   }
 
   function navigateQuestion(direction) {
     if (!session) return;
+    clearPracticeAutoAdvance();
     const nextIndex = session.index + direction;
     if (nextIndex < 0) return;
     if (nextIndex >= session.queue.length) {
@@ -864,10 +885,13 @@
   window.addEventListener("keydown", (event) => {
     if (!session || elements.imageDialog.open || elements.resultDialog.open || elements.issueDialog.open) return;
     if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+    if (event.repeat) return;
     const optionKey = KEYBOARD_OPTION_MAP[event.code] || (/^[1-4]$/.test(event.key) ? OPTION_KEYS[Number(event.key) - 1] : null);
     if (optionKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
       event.preventDefault();
-      answerQuestion(optionKey);
+      const examKeyboardAdvance = session.exam;
+      const answerAccepted = answerQuestion(optionKey);
+      if (examKeyboardAdvance && answerAccepted) navigateQuestion(1);
       return;
     }
     if (event.key === "ArrowLeft") navigateQuestion(-1);

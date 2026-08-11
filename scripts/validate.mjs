@@ -46,7 +46,7 @@ const htmlIds = [...html.matchAll(/\sid="([A-Za-z0-9_-]+)"/g)].map((match) => ma
 const duplicateHtmlIds = [...new Set(htmlIds.filter((id, index) => htmlIds.indexOf(id) !== index))];
 const jsIdSelectors = [...new Set([...app.matchAll(/\$\("#([A-Za-z0-9_-]+)"\)/g)].map((match) => match[1]))];
 const missingSelectors = jsIdSelectors.filter((id) => !htmlIds.includes(id));
-const featureTokens = ["localStorage", "data-mode=\"exam\"", "answer_status", "correct_answer", "data-language", "showModal", "performSearch", "Numpad1", "optionAssignments", "sourceKeyForDisplay"];
+const featureTokens = ["localStorage", "data-mode=\"exam\"", "answer_status", "correct_answer", "data-language", "showModal", "performSearch", "Numpad1", "optionAssignments", "sourceKeyForDisplay", "schedulePracticeAutoAdvance"];
 const missingFeatures = featureTokens.filter((token) => !app.includes(token) && !html.includes(token));
 const feedbackTokens = ["/api/feedback", "issueQuestionId", "feedback/issues.json", "local-server.mjs"];
 const feedbackSurface = `${html}\n${app}\n${localServer}\n${startScript}`;
