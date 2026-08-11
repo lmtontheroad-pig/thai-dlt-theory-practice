@@ -1,13 +1,15 @@
 {
   "meta": {
     "title": "SafeDrive DLT 泰国驾照理论练习",
-    "generated_at": "2026-08-11T00:55:24.707Z",
-    "question_count": 329,
-    "confirmed_count": 329,
+    "generated_at": "2026-08-11T05:01:56.515Z",
+    "source_question_count": 329,
+    "question_count": 328,
+    "excluded_question_count": 1,
+    "confirmed_count": 328,
     "unknown_count": 0,
-    "image_question_count": 146,
+    "image_question_count": 145,
     "partial_image_count": 0,
-    "substituted_image_question_count": 3
+    "substituted_image_question_count": 2
   },
   "categories": [
     {
@@ -8031,68 +8033,6 @@
       "fingerprint": "6c8d22759cc1823d5ede5ff2165e043abc266ccf6c0e8e5eec17f1177bc9ed4c"
     },
     {
-      "id": "SDLT-000160",
-      "category_th": "สุ่มทุกหมวดหมู่",
-      "category_zh": "所有类别随机题",
-      "question_th": "จากภาพข้อใดถูกต้อง",
-      "question_zh": "根据图片，以下哪项正确？",
-      "options": [
-        {
-          "key": "A",
-          "text_th": "รายละเอียดปรากฏตามภาพ รายละเอียดปรากฏตามภาพ",
-          "text_zh": "具体内容如图所示。具体内容如图所示。",
-          "image": "assets/images/SDLT-000160-A-substitute.webp",
-          "images": [
-            "assets/images/SDLT-000160-A-substitute.webp"
-          ]
-        },
-        {
-          "key": "B",
-          "text_th": "รายละเอียดปรากฏตามภาพ รายละเอียดปรากฏตามภาพ",
-          "text_zh": "具体内容如图所示。具体内容如图所示。",
-          "image": "assets/images/SDLT-000160-B-substitute.webp",
-          "images": [
-            "assets/images/SDLT-000160-B-substitute.webp"
-          ]
-        },
-        {
-          "key": "C",
-          "text_th": "รายละเอียดปรากฏตามภาพ รายละเอียดปรากฏตามภาพ",
-          "text_zh": "具体内容如图所示。具体内容如图所示。",
-          "image": "assets/images/SDLT-000160-C-substitute.webp",
-          "images": [
-            "assets/images/SDLT-000160-C-substitute.webp"
-          ]
-        },
-        {
-          "key": "D",
-          "text_th": "รายละเอียดปรากฏตามภาพ รายละเอียดปรากฏตามภาพ",
-          "text_zh": "具体内容如图所示。具体内容如图所示。",
-          "image": "assets/images/SDLT-000160-D-substitute.webp",
-          "images": [
-            "assets/images/SDLT-000160-D-substitute.webp"
-          ]
-        }
-      ],
-      "question_image": "",
-      "question_images": [],
-      "correct_answer": "B",
-      "answer_status": "confirmed",
-      "answer_source": "SafeDrive Tutor LMS 4.0.4 page data: decoded correct answer ID(s) from #tutor-quiz-context and matched them to the option input answer_id.",
-      "explanation_th": "",
-      "explanation_zh": "",
-      "image_status": "substituted",
-      "missing_image_sources": [
-        "https://safedrivedlt.com/wp-content/uploads/2022/05/%E0%B8%A0%E0%B8%B2%E0%B8%9E%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%9A%E0%B8%A7%E0%B8%B2%E0%B8%94%E0%B9%83%E0%B8%AB%E0%B8%A1%E0%B9%88-35.png",
-        "https://safedrivedlt.com/wp-content/uploads/2022/05/%E0%B8%A0%E0%B8%B2%E0%B8%9E%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%9A%E0%B8%A7%E0%B8%B2%E0%B8%94%E0%B9%83%E0%B8%AB%E0%B8%A1%E0%B9%88-32.png",
-        "https://safedrivedlt.com/wp-content/uploads/2022/05/%E0%B8%A0%E0%B8%B2%E0%B8%9E%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%9A%E0%B8%A7%E0%B8%B2%E0%B8%94%E0%B9%83%E0%B8%AB%E0%B8%A1%E0%B9%88-33.png",
-        "https://safedrivedlt.com/wp-content/uploads/2022/05/%E0%B8%A0%E0%B8%B2%E0%B8%9E%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%AA%E0%B8%AD%E0%B8%9A%E0%B8%A7%E0%B8%B2%E0%B8%94%E0%B9%83%E0%B8%AB%E0%B8%A1%E0%B9%88-34.png"
-      ],
-      "image_note": "原2022版图片无法再次取得；采用SafeDrive 2025重绘版同编号32至35图片，并按原题图片编号映射选项。",
-      "image_substitution_source_id": "SDLT-000026",
-      "fingerprint": "6d5eac4ca6549a9523aeaa6b23f6e8f4cb2f9f54d92e402bd83a1cbec0f4a7e8"
-    },
-    {
       "id": "SDLT-000161",
       "category_th": "ป้ายบังคับ",
       "category_zh": "管制标志",
@@ -12595,7 +12535,7 @@
       "category_th": "กฎหมายว่าด้วยการจราจรทางบก",
       "category_zh": "道路交通法",
       "question_th": "การขับรถผ่านทางร่วมทางแยกต้องปฏิบัติอย่างไร",
-      "question_zh": "驶经交叉路口时，应如何操作？",
+      "question_zh": "驾驶车辆通过交叉路口时，应当怎样操作？",
       "options": [
         {
           "key": "A",
@@ -15294,7 +15234,7 @@
         {
           "key": "A",
           "text_th": "สุดเขตบังคับ",
-          "text_zh": "强制规定路段结束",
+          "text_zh": "管制区段结束",
           "image": "",
           "images": []
         },

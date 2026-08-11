@@ -3,9 +3,10 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const site = root;
-const [dataText, translationText, html, css, app, localServer, startScript] = await Promise.all([
+const [dataText, translationText, exclusionsText, html, css, app, localServer, startScript] = await Promise.all([
   fs.readFile(path.join(site, "data", "questions_bilingual.json"), "utf8"),
   fs.readFile(path.join(site, "source", "questions_translated_zh.json"), "utf8"),
+  fs.readFile(path.join(site, "source", "excluded_questions.json"), "utf8"),
   fs.readFile(path.join(site, "index.html"), "utf8"),
   fs.readFile(path.join(site, "styles.css"), "utf8"),
   fs.readFile(path.join(site, "app.js"), "utf8"),
@@ -14,9 +15,12 @@ const [dataText, translationText, html, css, app, localServer, startScript] = aw
 ]);
 const data = JSON.parse(dataText);
 const translations = JSON.parse(translationText);
+const exclusions = JSON.parse(exclusionsText);
 const translationById = new Map(translations.map((item) => [item.id, item]));
 const ids = new Set(data.questions.map((item) => item.id));
 const fingerprints = new Set(data.questions.map((item) => item.fingerprint));
+const expectedQuestionCount = translations.length - exclusions.length;
+const exclusionErrors = exclusions.filter((item) => ids.has(item.id) || !ids.has(item.duplicate_of));
 const imageRefs = new Set(data.questions.flatMap((question) => [
   ...(question.question_images ?? []),
   ...question.options.flatMap((option) => option.images ?? []),
@@ -60,6 +64,8 @@ const imageOnlyOptionGaps = data.questions.flatMap((question) => question.option
 
 const result = {
   questions: data.questions.length,
+  source_questions: data.meta.source_question_count,
+  excluded_questions: exclusions.length,
   confirmed: data.questions.filter((item) => item.answer_status === "confirmed").length,
   unknown: data.questions.filter((item) => item.answer_status === "unknown").length,
   unique_ids: ids.size,
@@ -78,12 +84,15 @@ const result = {
   runtime_network_refs: runtimeNetworkRefs,
   translation_mismatches: translationMismatches.length,
   image_only_option_gaps: imageOnlyOptionGaps.length,
+  exclusion_errors: exclusionErrors.length,
 };
 
-const failed = result.questions !== 329
-  || result.confirmed !== 329
-  || result.unique_ids !== 329
-  || result.unique_fingerprints !== 329
+const failed = translations.length !== 329
+  || result.source_questions !== translations.length
+  || result.questions !== expectedQuestionCount
+  || result.confirmed !== expectedQuestionCount
+  || result.unique_ids !== expectedQuestionCount
+  || result.unique_fingerprints !== expectedQuestionCount
   || result.missing_images > 0
   || result.broken_images > 0
   || result.duplicate_html_ids > 0
@@ -93,6 +102,7 @@ const failed = result.questions !== 329
   || !result.start_script_ascii_only
   || result.runtime_network_refs > 0
   || result.translation_mismatches > 0
-  || result.image_only_option_gaps > 0;
+  || result.image_only_option_gaps > 0
+  || result.exclusion_errors > 0;
 console.log(JSON.stringify(result));
 if (failed) process.exitCode = 1;

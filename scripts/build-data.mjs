@@ -5,14 +5,16 @@ const root = path.resolve(import.meta.dirname, "..");
 const sourcePath = path.join(root, "source", "questions_th.json");
 const translationPath = path.join(root, "source", "questions_translated_zh.json");
 const overridesPath = path.join(root, "source", "image_overrides.json");
+const exclusionsPath = path.join(root, "source", "excluded_questions.json");
 const siteRoot = root;
 const dataDir = path.join(siteRoot, "data");
 const siteImages = path.join(siteRoot, "assets", "images");
 
-const [sourceQuestions, translations, imageOverrides] = await Promise.all([
+const [sourceQuestions, translations, imageOverrides, exclusions] = await Promise.all([
   fs.readFile(sourcePath, "utf8").then(JSON.parse),
   fs.readFile(translationPath, "utf8").then(JSON.parse),
   fs.readFile(overridesPath, "utf8").then(JSON.parse),
+  fs.readFile(exclusionsPath, "utf8").then(JSON.parse),
 ]);
 
 const translationById = new Map(translations.map((item) => [item.id, item]));
@@ -23,8 +25,14 @@ if (sourceQuestions.length !== translations.length || translationById.size !== t
 for (const id of sourceIds) {
   if (!translationById.has(id)) throw new Error(`Missing translation: ${id}`);
 }
+const exclusionById = new Map(exclusions.map((item) => [item.id, item]));
+if (exclusionById.size !== exclusions.length) throw new Error("Duplicate exclusion IDs");
+for (const exclusion of exclusions) {
+  if (!sourceIds.has(exclusion.id)) throw new Error(`Excluded question not found: ${exclusion.id}`);
+  if (!sourceIds.has(exclusion.duplicate_of) || exclusion.id === exclusion.duplicate_of) throw new Error(`Invalid duplicate target: ${exclusion.id} -> ${exclusion.duplicate_of}`);
+}
 
-const questions = sourceQuestions.map((source) => {
+const allQuestions = sourceQuestions.map((source) => {
   const translated = translationById.get(source.id);
   const translatedOptions = translated.options_zh ?? {};
   const options = source.options.map((option) => ({
@@ -59,7 +67,7 @@ const questions = sourceQuestions.map((source) => {
   };
 });
 
-const questionById = new Map(questions.map((question) => [question.id, question]));
+const questionById = new Map(allQuestions.map((question) => [question.id, question]));
 const aliasCopies = [];
 for (const [targetId, override] of Object.entries(imageOverrides)) {
   const target = questionById.get(targetId);
@@ -84,6 +92,8 @@ for (const [targetId, override] of Object.entries(imageOverrides)) {
   target.image_substitution_source_id = override.source_id;
 }
 
+const questions = allQuestions.filter((question) => !exclusionById.has(question.id));
+
 const categories = [...new Map(questions.map((question) => [
   `${question.category_zh}\u0000${question.category_th}`,
   { zh: question.category_zh, th: question.category_th },
@@ -93,7 +103,9 @@ const payload = {
   meta: {
     title: "SafeDrive DLT 泰国驾照理论练习",
     generated_at: new Date().toISOString(),
+    source_question_count: sourceQuestions.length,
     question_count: questions.length,
+    excluded_question_count: exclusions.length,
     confirmed_count: questions.filter((item) => item.answer_status === "confirmed").length,
     unknown_count: questions.filter((item) => item.answer_status === "unknown").length,
     image_question_count: questions.filter((item) => item.image_status !== "none").length,
@@ -132,6 +144,8 @@ for (const question of questions) {
 
 console.log(JSON.stringify({
   questions: questions.length,
+  source_questions: sourceQuestions.length,
+  excluded_questions: exclusions.length,
   confirmed: payload.meta.confirmed_count,
   unknown: payload.meta.unknown_count,
   image_questions: payload.meta.image_question_count,
