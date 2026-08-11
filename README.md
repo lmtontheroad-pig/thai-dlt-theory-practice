@@ -6,7 +6,9 @@
 
 ## 直接使用
 
-下载或克隆仓库后，双击根目录的 `index.html` 即可。无需安装依赖、无需登录、无需联网。
+下载或克隆仓库后，双击根目录的 `start-local.cmd`。它会启动只监听本机的题库服务并自动打开浏览器，无需登录或联网。
+
+直接双击 `index.html` 仍可答题，但浏览器不能把反馈写入项目文件，因此反馈功能会提示改用启动脚本。
 
 建议使用 Windows 上的最新版 Firefox、Chrome 或 Edge。不要只从 ZIP 压缩包内部打开 `index.html`；请先完整解压，否则浏览器可能找不到同目录的题库和图片。
 
@@ -21,6 +23,8 @@
 - 显示泰文原文
 - 题目图片和选项图片点击放大
 - 使用 `localStorage` 保存本机学习记录
+- 题目侧边反馈箱：自动记录稳定 ID、中泰题文、选项及图片引用
+- 反馈直接保存到本机 `feedback/issues.json`，供 Codex 后续集中修正
 
 ## 题库状态
 
@@ -41,7 +45,9 @@ SafeDrive 没有公开随机题池总量，因此“329”表示当前已经取�
 ├─ index.html                 # 离线网页入口
 ├─ app.js                     # 答题与本地存储逻辑
 ├─ styles.css                 # 桌面界面样式
+├─ start-local.cmd            # Windows 本地启动入口
 ├─ assets/images/             # 本地题目与选项图片
+├─ feedback/                  # 本机反馈记录（issues.json 不上传）
 ├─ data/
 │  ├─ questions.js            # file:// 页面直接加载的数据
 │  └─ questions_bilingual.json
@@ -51,6 +57,7 @@ SafeDrive 没有公开随机题池总量，因此“329”表示当前已经取�
 │  └─ image_overrides.json    # 缺图补足来源和映射
 ├─ scripts/
 │  ├─ build-data.mjs          # 按稳定 ID 重新合并数据
+│  ├─ local-server.mjs        # 本地页面与反馈写入服务
 │  └─ validate.mjs            # 完整性检查
 └─ docs/DATA_PROVENANCE.md    # 数据来源与限制
 ```
@@ -64,7 +71,7 @@ npm run build
 npm test
 ```
 
-也可以用任意静态文件服务器预览：
+启动本地题库与反馈服务：
 
 ```bash
 npm run serve

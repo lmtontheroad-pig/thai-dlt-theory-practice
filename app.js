@@ -8,6 +8,14 @@
   }
 
   const STORAGE_KEY = "safedrive-dlt-local-exam-v1";
+  const ISSUE_API = "/api/feedback";
+  const ISSUE_TYPE_LABELS = {
+    translation: "中文翻译不准确",
+    image: "图片错误或缺失",
+    answer: "答案或解释有疑问",
+    content: "题目或选项内容问题",
+    other: "其他问题",
+  };
   const questions = database.questions;
   const questionById = new Map(questions.map((question) => [question.id, question]));
   const allIds = questions.map((question) => question.id);
@@ -46,10 +54,12 @@
   let examInterval = null;
   let lastExamWrongIds = [];
   let searchResultIds = [];
+  let issueReports = [];
+  let issueSyncAvailable = false;
 
   const elements = {
     dashboard: $("#dashboardView"), quiz: $("#quizView"), categorySelect: $("#categorySelect"),
-    wrongBadge: $("#wrongBadge"), favoriteBadge: $("#favoriteBadge"), databaseCount: $("#databaseCount"),
+    wrongBadge: $("#wrongBadge"), favoriteBadge: $("#favoriteBadge"), issueBadge: $("#issueBadge"), databaseCount: $("#databaseCount"),
     metricPracticed: $("#metricPracticed"), metricAccuracy: $("#metricAccuracy"), metricAttempts: $("#metricAttempts"),
     metricWrong: $("#metricWrong"), metricFavorites: $("#metricFavorites"), coveragePercent: $("#coveragePercent"),
     coverageBar: $("#coverageBar"), coverageText: $("#coverageText"), remainingText: $("#remainingText"),
@@ -67,11 +77,215 @@
     imageDialog: $("#imageDialog"), dialogImage: $("#dialogImage"), resultDialog: $("#examResultDialog"),
     resultIcon: $("#resultIcon"), resultTitle: $("#resultTitle"), resultScore: $("#resultScore"),
     resultSummary: $("#resultSummary"), resultCorrect: $("#resultCorrect"), resultWrong: $("#resultWrong"),
-    resultUnanswered: $("#resultUnanswered"),
+    resultUnanswered: $("#resultUnanswered"), issueDialog: $("#issueDialog"), issueForm: $("#issueForm"),
+    issueQuestionId: $("#issueQuestionId"), issueType: $("#issueType"), issueDescription: $("#issueDescription"),
+    issueContext: $("#issueContext"), issueSaveMessage: $("#issueSaveMessage"), issueSyncStatus: $("#issueSyncStatus"),
+    issueRecordCount: $("#issueRecordCount"), issueList: $("#issueList"), questionIdList: $("#questionIdList"),
   };
 
   function saveStore() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); } catch { /* The app remains usable without persistence. */ }
+  }
+
+  function currentQuestion() {
+    if (!session) return null;
+    return questionById.get(session.queue[session.index]) || null;
+  }
+
+  function buildIssueSnapshot(question) {
+    if (!question) return null;
+    return {
+      id: question.id,
+      fingerprint: question.fingerprint,
+      category_zh: question.category_zh,
+      category_th: question.category_th,
+      question_zh: question.question_zh,
+      question_th: question.question_th,
+      options: question.options.map((option) => ({
+        key: option.key,
+        text_zh: option.text_zh,
+        text_th: option.text_th,
+        images: [...(option.images || [])],
+      })),
+      question_images: [...(question.question_images || [])],
+      image_status: question.image_status,
+      image_note: question.image_note || "",
+      correct_answer: question.correct_answer,
+      answer_status: question.answer_status,
+    };
+  }
+
+  function setIssueSyncState(available, message) {
+    issueSyncAvailable = available;
+    elements.issueSyncStatus.className = `issue-sync-status ${available ? "online" : "offline"}`;
+    elements.issueSyncStatus.querySelector("strong").textContent = message;
+    elements.issueForm.querySelector("button[type='submit']").disabled = !available;
+  }
+
+  async function issueApi(path = ISSUE_API, options = {}) {
+    const response = await fetch(path, {
+      ...options,
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    });
+    if (!response.ok) throw new Error(`反馈服务返回 ${response.status}`);
+    return response.status === 204 ? null : response.json();
+  }
+
+  async function refreshIssueReports() {
+    elements.issueSyncStatus.className = "issue-sync-status checking";
+    elements.issueSyncStatus.querySelector("strong").textContent = "正在检查项目同步";
+    try {
+      const payload = await issueApi();
+      issueReports = Array.isArray(payload.feedback) ? payload.feedback : [];
+      setIssueSyncState(true, "已同步到项目文件");
+    } catch {
+      issueReports = [];
+      setIssueSyncState(false, "未连接本地反馈服务");
+    }
+    renderIssueReports();
+  }
+
+  function renderIssueReports() {
+    const openCount = issueReports.filter((report) => report.status !== "resolved").length;
+    elements.issueBadge.textContent = openCount;
+    elements.issueRecordCount.textContent = `${issueReports.length} 条 · ${openCount} 条待处理`;
+    if (!issueReports.length) {
+      const empty = document.createElement("div");
+      empty.className = "issue-empty";
+      empty.textContent = issueSyncAvailable ? "还没有记录问题" : "请双击 start-local.cmd 启动题库，反馈才能直接写入项目文件。";
+      elements.issueList.replaceChildren(empty);
+      return;
+    }
+
+    const rows = [...issueReports].sort((left, right) => String(right.created_at).localeCompare(String(left.created_at))).map((report) => {
+      const row = document.createElement("article");
+      row.className = `issue-item${report.status === "resolved" ? " resolved" : ""}`;
+      const header = document.createElement("div");
+      header.className = "issue-item-header";
+      const labels = document.createElement("div");
+      const questionId = document.createElement("span");
+      questionId.className = "issue-item-id";
+      questionId.textContent = report.question_id || "全局反馈";
+      const type = document.createElement("span");
+      type.className = "issue-type-chip";
+      type.textContent = ISSUE_TYPE_LABELS[report.type] || ISSUE_TYPE_LABELS.other;
+      labels.append(questionId, type);
+      if (report.status === "resolved") {
+        const status = document.createElement("span");
+        status.className = "issue-status-chip";
+        status.textContent = "已处理";
+        labels.append(status);
+      }
+      const time = document.createElement("time");
+      time.dateTime = report.created_at || "";
+      time.textContent = report.created_at ? new Date(report.created_at).toLocaleString("zh-CN") : "";
+      header.append(labels, time);
+      const description = document.createElement("p");
+      description.textContent = report.description || "";
+      const actions = document.createElement("div");
+      actions.className = "issue-item-actions";
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.textContent = report.status === "resolved" ? "重新打开" : "标记已处理";
+      toggle.addEventListener("click", async () => {
+        await updateIssueReport(report.id, { status: report.status === "resolved" ? "open" : "resolved" });
+      });
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "删除";
+      remove.addEventListener("click", async () => {
+        if (!window.confirm(`确定删除 ${report.question_id || "这条"} 反馈吗？`)) return;
+        await deleteIssueReport(report.id);
+      });
+      actions.append(toggle, remove);
+      row.append(header, description, actions);
+      return row;
+    });
+    elements.issueList.replaceChildren(...rows);
+  }
+
+  async function updateIssueReport(id, changes) {
+    try {
+      const payload = await issueApi(`${ISSUE_API}/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(changes) });
+      issueReports = payload.feedback;
+      renderIssueReports();
+    } catch {
+      setIssueSyncState(false, "写入失败，请重新用启动脚本打开");
+    }
+  }
+
+  async function deleteIssueReport(id) {
+    try {
+      const payload = await issueApi(`${ISSUE_API}/${encodeURIComponent(id)}`, { method: "DELETE" });
+      issueReports = payload.feedback;
+      renderIssueReports();
+    } catch {
+      setIssueSyncState(false, "删除失败，请重新用启动脚本打开");
+    }
+  }
+
+  function updateIssueContext() {
+    const id = elements.issueQuestionId.value.trim().toUpperCase();
+    const question = questionById.get(id);
+    elements.issueContext.textContent = question ? `${question.id} · ${question.category_zh}` : id ? "题号未找到" : "未关联题目";
+  }
+
+  async function openIssueCenter() {
+    const question = currentQuestion();
+    elements.issueQuestionId.value = question?.id || "";
+    elements.issueType.value = "translation";
+    elements.issueDescription.value = "";
+    elements.issueSaveMessage.textContent = "";
+    updateIssueContext();
+    if (!elements.issueDialog.open) elements.issueDialog.showModal();
+    await refreshIssueReports();
+    (question ? elements.issueDescription : elements.issueQuestionId).focus();
+  }
+
+  function resetIssueForm() {
+    const question = currentQuestion();
+    elements.issueQuestionId.value = question?.id || "";
+    elements.issueType.value = "translation";
+    elements.issueDescription.value = "";
+    elements.issueSaveMessage.textContent = "";
+    updateIssueContext();
+  }
+
+  async function saveIssueReport(event) {
+    event.preventDefault();
+    const questionId = elements.issueQuestionId.value.trim().toUpperCase();
+    const question = questionId ? questionById.get(questionId) : null;
+    elements.issueQuestionId.setCustomValidity(questionId && !question ? "请输入有效的 SDLT 题目编号" : "");
+    if (!elements.issueForm.reportValidity()) return;
+    if (!issueSyncAvailable) {
+      elements.issueSaveMessage.textContent = "请先通过 start-local.cmd 启动题库。";
+      return;
+    }
+
+    const report = {
+      id: `FB-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+      question_id: question?.id || null,
+      type: ISSUE_TYPE_LABELS[elements.issueType.value] ? elements.issueType.value : "other",
+      description: elements.issueDescription.value.trim(),
+      status: "open",
+      created_at: new Date().toISOString(),
+      context: {
+        practice_mode: session?.mode || "dashboard",
+        selected_answer: question && session ? (session.answers[question.id] || null) : null,
+      },
+      question_snapshot: buildIssueSnapshot(question),
+    };
+
+    try {
+      const payload = await issueApi(ISSUE_API, { method: "POST", body: JSON.stringify(report) });
+      issueReports = payload.feedback;
+      elements.issueDescription.value = "";
+      elements.issueSaveMessage.textContent = "已保存到 feedback/issues.json";
+      renderIssueReports();
+    } catch {
+      setIssueSyncState(false, "写入失败，请重新用启动脚本打开");
+      elements.issueSaveMessage.textContent = "反馈未保存。";
+    }
   }
 
   function shuffle(values) {
@@ -595,9 +809,23 @@
   elements.imageDialog.addEventListener("click", (event) => { if (event.target === elements.imageDialog) elements.imageDialog.close(); });
   $("#closeResult").addEventListener("click", () => { elements.resultDialog.close(); showDashboard(true); });
   $("#reviewExam").addEventListener("click", () => { elements.resultDialog.close(); startSession("review", { ids: lastExamWrongIds }); });
+  $("#openIssueCenter").addEventListener("click", openIssueCenter);
+  $("#quickIssueButton").addEventListener("click", openIssueCenter);
+  $("#closeIssueDialog").addEventListener("click", () => elements.issueDialog.close());
+  elements.issueDialog.addEventListener("click", (event) => { if (event.target === elements.issueDialog) elements.issueDialog.close(); });
+  elements.issueForm.addEventListener("submit", saveIssueReport);
+  $("#resetIssueForm").addEventListener("click", resetIssueForm);
+  elements.issueQuestionId.addEventListener("input", () => {
+    elements.issueQuestionId.setCustomValidity("");
+    updateIssueContext();
+  });
+  elements.issueQuestionId.addEventListener("blur", () => {
+    elements.issueQuestionId.value = elements.issueQuestionId.value.trim().toUpperCase();
+    updateIssueContext();
+  });
 
   window.addEventListener("keydown", (event) => {
-    if (!session || elements.imageDialog.open || elements.resultDialog.open) return;
+    if (!session || elements.imageDialog.open || elements.resultDialog.open || elements.issueDialog.open) return;
     if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
     if (/^[1-4]$/.test(event.key)) {
       const key = ["A", "B", "C", "D"][Number(event.key) - 1];
@@ -608,6 +836,13 @@
   });
 
   populateCategories();
+  elements.questionIdList.replaceChildren(...allIds.map((id) => {
+    const option = document.createElement("option");
+    option.value = id;
+    return option;
+  }));
   renderDashboard();
+  renderIssueReports();
+  refreshIssueReports();
   $$("[data-language]").forEach((button) => button.classList.toggle("active", button.dataset.language === currentLanguage()));
 })();

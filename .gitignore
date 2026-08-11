@@ -4,3 +4,4 @@ node_modules/
 Thumbs.db
 desktop.ini
 *.log
+feedback/issues.json

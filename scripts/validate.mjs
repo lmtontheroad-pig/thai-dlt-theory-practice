@@ -3,12 +3,14 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const site = root;
-const [dataText, translationText, html, css, app] = await Promise.all([
+const [dataText, translationText, html, css, app, localServer, startScript] = await Promise.all([
   fs.readFile(path.join(site, "data", "questions_bilingual.json"), "utf8"),
   fs.readFile(path.join(site, "source", "questions_translated_zh.json"), "utf8"),
   fs.readFile(path.join(site, "index.html"), "utf8"),
   fs.readFile(path.join(site, "styles.css"), "utf8"),
   fs.readFile(path.join(site, "app.js"), "utf8"),
+  fs.readFile(path.join(site, "scripts", "local-server.mjs"), "utf8"),
+  fs.readFile(path.join(site, "start-local.cmd"), "utf8"),
 ]);
 const data = JSON.parse(dataText);
 const translations = JSON.parse(translationText);
@@ -42,6 +44,9 @@ const jsIdSelectors = [...new Set([...app.matchAll(/\$\("#([A-Za-z0-9_-]+)"\)/g)
 const missingSelectors = jsIdSelectors.filter((id) => !htmlIds.includes(id));
 const featureTokens = ["localStorage", "data-mode=\"exam\"", "answer_status", "correct_answer", "data-language", "showModal", "performSearch"];
 const missingFeatures = featureTokens.filter((token) => !app.includes(token) && !html.includes(token));
+const feedbackTokens = ["/api/feedback", "issueQuestionId", "feedback/issues.json", "local-server.mjs"];
+const feedbackSurface = `${html}\n${app}\n${localServer}\n${startScript}`;
+const missingFeedbackFeatures = feedbackTokens.filter((token) => !feedbackSurface.includes(token));
 const runtimeNetworkRefs = [...`${html}\n${css}\n${app}`.matchAll(/https?:\/\//g)].length;
 const translationMismatches = data.questions.filter((question) => {
   const translated = translationById.get(question.id);
@@ -67,6 +72,7 @@ const result = {
   duplicate_html_ids: duplicateHtmlIds.length,
   missing_js_selectors: missingSelectors.length,
   missing_feature_tokens: missingFeatures,
+  missing_feedback_tokens: missingFeedbackFeatures,
   runtime_network_refs: runtimeNetworkRefs,
   translation_mismatches: translationMismatches.length,
   image_only_option_gaps: imageOnlyOptionGaps.length,
@@ -81,6 +87,7 @@ const failed = result.questions !== 329
   || result.duplicate_html_ids > 0
   || result.missing_js_selectors > 0
   || result.missing_feature_tokens.length > 0
+  || result.missing_feedback_tokens.length > 0
   || result.runtime_network_refs > 0
   || result.translation_mismatches > 0
   || result.image_only_option_gaps > 0;

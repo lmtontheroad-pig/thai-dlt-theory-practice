@@ -6,7 +6,7 @@
   "description": "Offline Chinese-Thai SafeDrive DLT driving theory practice website",
   "scripts": {
     "build": "node scripts/build-data.mjs",
-    "test": "node --check app.js && node --check scripts/build-data.mjs && node scripts/validate.mjs",
-    "serve": "python -m http.server 8765"
+    "test": "node --check app.js && node --check scripts/build-data.mjs && node --check scripts/local-server.mjs && node scripts/validate.mjs",
+    "serve": "node scripts/local-server.mjs"
   }
 }

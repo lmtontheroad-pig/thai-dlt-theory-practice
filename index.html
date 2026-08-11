@@ -27,6 +27,7 @@
         <button class="nav-button exam-button" data-mode="exam"><span>◷</span>50题模拟考试</button>
         <button class="nav-button" data-mode="wrong"><span>↻</span>错题练习 <b id="wrongBadge">0</b></button>
         <button class="nav-button" data-mode="favorites"><span>☆</span>收藏题目 <b id="favoriteBadge">0</b></button>
+        <button id="openIssueCenter" class="nav-button" type="button"><span>!</span>问题反馈 <b id="issueBadge">0</b></button>
       </nav>
 
       <div class="sidebar-label category-label">按分类练习</div>
@@ -182,6 +183,10 @@
     </main>
   </div>
 
+  <button id="quickIssueButton" class="quick-issue-button" type="button" aria-controls="issueDialog">
+    <span aria-hidden="true">!</span>反馈
+  </button>
+
   <dialog id="imageDialog" class="image-dialog">
     <button id="closeImageDialog" type="button" aria-label="关闭图片">×</button>
     <img id="dialogImage" alt="题目图片放大查看">
@@ -201,6 +206,66 @@
     <div class="dialog-actions">
       <button id="reviewExam" class="ghost-button" type="button">回顾错题</button>
       <button id="closeResult" class="primary-button" type="button">返回概览</button>
+    </div>
+  </dialog>
+
+  <dialog id="issueDialog" class="issue-dialog">
+    <div class="issue-dialog-shell">
+      <header class="issue-dialog-header">
+        <div>
+          <span class="eyebrow">本机问题记录</span>
+          <h2>题目反馈箱</h2>
+          <p>记录翻译、图片或其他问题；当前题目的中泰文本和图片引用会一并保存。</p>
+        </div>
+        <button id="closeIssueDialog" class="dialog-close-button" type="button" aria-label="关闭反馈箱">×</button>
+      </header>
+
+      <div class="issue-dialog-grid">
+        <form id="issueForm" class="issue-form">
+          <div class="issue-form-heading">
+            <strong>新增反馈</strong>
+            <span id="issueContext">未关联题目</span>
+          </div>
+
+          <label>
+            <span>题目编号（可留空）</span>
+            <input id="issueQuestionId" list="questionIdList" type="text" placeholder="例如 SDLT-000001" autocomplete="off">
+            <datalist id="questionIdList"></datalist>
+          </label>
+
+          <label>
+            <span>问题类型</span>
+            <select id="issueType">
+              <option value="translation">中文翻译不准确</option>
+              <option value="image">图片错误或缺失</option>
+              <option value="answer">答案或解释有疑问</option>
+              <option value="content">题目或选项内容问题</option>
+              <option value="other">其他问题</option>
+            </select>
+          </label>
+
+          <label>
+            <span>问题说明</span>
+            <textarea id="issueDescription" rows="7" required placeholder="请写明哪里不准确、图片哪里不对，或者建议怎样修改……"></textarea>
+          </label>
+
+          <p class="issue-snapshot-note">保存时会自动附带该题当时的中泰题文、全部选项、图片路径和答案状态，方便以后准确复现。</p>
+          <div class="issue-form-actions">
+            <button id="resetIssueForm" class="ghost-button" type="button">清空</button>
+            <button class="primary-button" type="submit">保存反馈</button>
+          </div>
+          <div id="issueSaveMessage" class="issue-save-message" aria-live="polite"></div>
+        </form>
+
+        <section class="issue-records-panel" aria-labelledby="issueRecordsTitle">
+          <div class="issue-records-heading">
+            <div><strong id="issueRecordsTitle">已记录问题</strong><span id="issueRecordCount">0 条</span></div>
+            <div id="issueSyncStatus" class="issue-sync-status checking"><span></span><strong>正在检查项目同步</strong></div>
+          </div>
+          <p class="issue-export-tip">通过启动脚本打开题库后，反馈会直接保存到 <code>feedback/issues.json</code>，以后只需让 Codex 检查全部反馈。</p>
+          <div id="issueList" class="issue-list"></div>
+        </section>
+      </div>
     </div>
   </dialog>
 
