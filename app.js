@@ -443,6 +443,7 @@
       index: startIndex,
       answers: {},
       results: {},
+      optionOrders: {},
       answered: 0,
       correct: 0,
       exam: mode === "exam",
@@ -477,6 +478,14 @@
     return store.preferences.language || "zh";
   }
 
+  function orderedOptions(question) {
+    if (!session.optionOrders[question.id]) {
+      session.optionOrders[question.id] = shuffle(question.options.map((option) => option.key));
+    }
+    const optionByKey = new Map(question.options.map((option) => [option.key, option]));
+    return session.optionOrders[question.id].map((key) => optionByKey.get(key)).filter(Boolean);
+  }
+
   function renderQuestion() {
     if (!session) return;
     const id = session.queue[session.index];
@@ -506,7 +515,7 @@
     elements.favoriteButton.textContent = store.favorites.includes(id) ? "★ 已收藏" : "☆ 收藏";
 
     elements.questionImages.replaceChildren(...(question.question_images || []).map((path, index) => createImage(path, `${question.id} 题目图片 ${index + 1}`)));
-    elements.optionsList.replaceChildren(...question.options.map((option, optionIndex) => {
+    elements.optionsList.replaceChildren(...orderedOptions(question).map((option) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "option-button";
@@ -527,8 +536,9 @@
       key.append(document.createTextNode(option.key));
       const shortcut = document.createElement("small");
       shortcut.className = "option-shortcut";
-      shortcut.textContent = String(optionIndex + 1);
-      shortcut.title = `小键盘 ${optionIndex + 1}`;
+      const shortcutNumber = { A: 1, B: 2, C: 3, D: 4 }[option.key];
+      shortcut.textContent = String(shortcutNumber);
+      shortcut.title = `小键盘 ${shortcutNumber}`;
       key.append(shortcut);
       const content = document.createElement("span");
       content.className = "option-text";
@@ -561,7 +571,7 @@
     elements.finishExam.classList.toggle("hidden", !session.exam);
     elements.examTimer.classList.toggle("hidden", !session.exam);
     elements.examNavigatorCard.classList.toggle("hidden", !session.exam);
-    elements.modeTip.textContent = session.exam ? "模拟考试期间只保存选择，不显示正误。键盘 1/2/3/4 对应 A/B/C/D。" : "作答后立即显示标准答案。键盘 1/2/3/4 对应 A/B/C/D。";
+    elements.modeTip.textContent = session.exam ? "选项顺序每轮随机；考试期间只保存选择。键盘 1/2/3/4 对应 A/B/C/D。" : "选项顺序每轮随机且本轮保持稳定。键盘 1/2/3/4 对应 A/B/C/D。";
     updateSessionStats();
     if (session.exam) renderExamNavigator();
   }
