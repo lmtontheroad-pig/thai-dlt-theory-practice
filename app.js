@@ -20,6 +20,7 @@
     Digit1: "A", Digit2: "B", Digit3: "C", Digit4: "D",
     Numpad1: "A", Numpad2: "B", Numpad3: "C", Numpad4: "D",
   };
+  const OPTION_KEYS = ["A", "B", "C", "D"];
   const questions = database.questions;
   const questionById = new Map(questions.map((question) => [question.id, question]));
   const allIds = questions.map((question) => question.id);
@@ -275,7 +276,9 @@
       created_at: new Date().toISOString(),
       context: {
         practice_mode: session?.mode || "dashboard",
-        selected_answer: question && session ? (session.answers[question.id] || null) : null,
+        selected_display_answer: question && session ? (session.answers[question.id] || null) : null,
+        selected_source_answer: question && session && session.answers[question.id] ? sourceKeyForDisplay(question, session.answers[question.id]) : null,
+        option_assignment: question && session ? { ...optionAssignment(question) } : null,
       },
       question_snapshot: buildIssueSnapshot(question),
     };
@@ -443,7 +446,7 @@
       index: startIndex,
       answers: {},
       results: {},
-      optionOrders: {},
+      optionAssignments: {},
       answered: 0,
       correct: 0,
       exam: mode === "exam",
@@ -478,12 +481,30 @@
     return store.preferences.language || "zh";
   }
 
-  function orderedOptions(question) {
-    if (!session.optionOrders[question.id]) {
-      session.optionOrders[question.id] = shuffle(question.options.map((option) => option.key));
+  function optionAssignment(question) {
+    if (!session.optionAssignments[question.id]) {
+      const availableKeys = new Set(question.options.map((option) => option.key));
+      const displayKeys = OPTION_KEYS.filter((key) => availableKeys.has(key));
+      let sourceKeys = shuffle(displayKeys);
+      if (sourceKeys.every((key, index) => key === displayKeys[index])) sourceKeys = [...sourceKeys.slice(1), sourceKeys[0]];
+      session.optionAssignments[question.id] = Object.fromEntries(displayKeys.map((displayKey, index) => [displayKey, sourceKeys[index]]));
     }
+    return session.optionAssignments[question.id];
+  }
+
+  function assignedOptions(question) {
+    const assignment = optionAssignment(question);
     const optionByKey = new Map(question.options.map((option) => [option.key, option]));
-    return session.optionOrders[question.id].map((key) => optionByKey.get(key)).filter(Boolean);
+    return OPTION_KEYS.map((displayKey) => ({ displayKey, sourceOption: optionByKey.get(assignment[displayKey]) })).filter((item) => item.sourceOption);
+  }
+
+  function sourceKeyForDisplay(question, displayKey) {
+    return optionAssignment(question)[displayKey] || displayKey;
+  }
+
+  function correctDisplayKey(question) {
+    const assignment = optionAssignment(question);
+    return Object.keys(assignment).find((displayKey) => assignment[displayKey] === question.correct_answer) || question.correct_answer;
   }
 
   function renderQuestion() {
@@ -515,52 +536,47 @@
     elements.favoriteButton.textContent = store.favorites.includes(id) ? "★ 已收藏" : "☆ 收藏";
 
     elements.questionImages.replaceChildren(...(question.question_images || []).map((path, index) => createImage(path, `${question.id} 题目图片 ${index + 1}`)));
-    elements.optionsList.replaceChildren(...orderedOptions(question).map((option) => {
+    const displayedCorrectAnswer = correctDisplayKey(question);
+    elements.optionsList.replaceChildren(...assignedOptions(question).map(({ displayKey, sourceOption }) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "option-button";
-      button.dataset.key = option.key;
+      button.dataset.key = displayKey;
       button.setAttribute("role", "radio");
-      button.setAttribute("aria-checked", selected === option.key ? "true" : "false");
+      button.setAttribute("aria-checked", selected === displayKey ? "true" : "false");
       if (!session.exam && practiceResult) button.disabled = true;
 
-      if (session.exam && selected === option.key) button.classList.add("selected");
+      if (session.exam && selected === displayKey) button.classList.add("selected");
       if (!session.exam && practiceResult) {
-        if (option.key === question.correct_answer && question.answer_status === "confirmed") button.classList.add("correct");
-        if (option.key === practiceResult.key && practiceResult.correct === false) button.classList.add("incorrect");
-        if (option.key === practiceResult.key && practiceResult.correct === null) button.classList.add("selected");
+        if (displayKey === displayedCorrectAnswer && question.answer_status === "confirmed") button.classList.add("correct");
+        if (displayKey === practiceResult.key && practiceResult.correct === false) button.classList.add("incorrect");
+        if (displayKey === practiceResult.key && practiceResult.correct === null) button.classList.add("selected");
       }
 
       const key = document.createElement("span");
       key.className = "option-key";
-      key.append(document.createTextNode(option.key));
-      const shortcut = document.createElement("small");
-      shortcut.className = "option-shortcut";
-      const shortcutNumber = { A: 1, B: 2, C: 3, D: 4 }[option.key];
-      shortcut.textContent = String(shortcutNumber);
-      shortcut.title = `小键盘 ${shortcutNumber}`;
-      key.append(shortcut);
+      key.textContent = displayKey;
       const content = document.createElement("span");
       content.className = "option-text";
       if (language === "th") {
-        content.append(document.createTextNode(option.text_th || "内容见图片"));
+        content.append(document.createTextNode(sourceOption.text_th || "内容见图片"));
       } else {
-        content.append(document.createTextNode(option.text_zh || "内容见图片"));
+        content.append(document.createTextNode(sourceOption.text_zh || "内容见图片"));
         if (language === "both") {
           const thai = document.createElement("span");
           thai.className = "option-th";
-          thai.textContent = option.text_th || "รายละเอียดตามภาพ";
+          thai.textContent = sourceOption.text_th || "รายละเอียดตามภาพ";
           content.append(thai);
         }
       }
-      if (option.images?.length) {
+      if (sourceOption.images?.length) {
         const images = document.createElement("span");
         images.className = "option-images";
-        option.images.forEach((path, index) => images.append(createImage(path, `${question.id} 选项 ${option.key} 图片 ${index + 1}`)));
+        sourceOption.images.forEach((path, index) => images.append(createImage(path, `${question.id} 选项 ${displayKey} 图片 ${index + 1}`)));
         content.append(images);
       }
       button.append(key, content);
-      button.addEventListener("click", () => answerQuestion(option.key));
+      button.addEventListener("click", () => answerQuestion(displayKey));
       return button;
     }));
 
@@ -571,7 +587,7 @@
     elements.finishExam.classList.toggle("hidden", !session.exam);
     elements.examTimer.classList.toggle("hidden", !session.exam);
     elements.examNavigatorCard.classList.toggle("hidden", !session.exam);
-    elements.modeTip.textContent = session.exam ? "选项顺序每轮随机；考试期间只保存选择。键盘 1/2/3/4 对应 A/B/C/D。" : "选项顺序每轮随机且本轮保持稳定。键盘 1/2/3/4 对应 A/B/C/D。";
+    elements.modeTip.textContent = session.exam ? "A/B/C/D位置固定，选项内容每轮随机；考试期间只保存选择。" : "A/B/C/D位置固定，选项内容每轮随机且本轮保持稳定。";
     updateSessionStats();
     if (session.exam) renderExamNavigator();
   }
@@ -594,7 +610,7 @@
       detail.textContent = question.explanation_zh || "正确答案来自 SafeDrive 页面提供的可验证数据。";
     } else if (result.correct === false) {
       elements.feedback.className = "feedback incorrect";
-      elements.feedback.append(document.createTextNode(`回答错误，正确答案为 ${question.correct_answer}`));
+      elements.feedback.append(document.createTextNode(`回答错误，正确答案为 ${correctDisplayKey(question)}`));
       detail.textContent = question.explanation_zh || "本题已加入错题集；再次答对后会自动移出。";
     } else {
       elements.feedback.className = "feedback unknown";
@@ -616,12 +632,13 @@
     }
     if (session.results[id]) return;
     let correct = null;
-    if (question.answer_status === "confirmed" && question.correct_answer) correct = key === question.correct_answer;
-    session.results[id] = { key, correct };
+    const sourceKey = sourceKeyForDisplay(question, key);
+    if (question.answer_status === "confirmed" && question.correct_answer) correct = sourceKey === question.correct_answer;
+    session.results[id] = { key, sourceKey, correct };
     session.answers[id] = key;
     session.answered += 1;
     if (correct === true) session.correct += 1;
-    if (correct !== null) recordAttempt(id, correct, key);
+    if (correct !== null) recordAttempt(id, correct, sourceKey);
     saveStore();
     renderQuestion();
     renderDashboard();
@@ -717,12 +734,13 @@
     const wrongIds = [];
     for (const id of session.queue) {
       const question = questionById.get(id);
-      const selected = session.answers[id] || null;
-      if (!selected) unanswered += 1;
+      const selectedDisplayKey = session.answers[id] || null;
+      const selectedSourceKey = selectedDisplayKey ? sourceKeyForDisplay(question, selectedDisplayKey) : null;
+      if (!selectedDisplayKey) unanswered += 1;
       if (question.answer_status !== "confirmed" || !question.correct_answer) continue;
-      const correct = selected === question.correct_answer;
+      const correct = selectedSourceKey === question.correct_answer;
       if (correct) score += 1; else wrongIds.push(id);
-      recordAttempt(id, correct, selected);
+      recordAttempt(id, correct, selectedSourceKey);
     }
     session.completed = true;
     session.score = score;
@@ -846,7 +864,7 @@
   window.addEventListener("keydown", (event) => {
     if (!session || elements.imageDialog.open || elements.resultDialog.open || elements.issueDialog.open) return;
     if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-    const optionKey = KEYBOARD_OPTION_MAP[event.code] || (/^[1-4]$/.test(event.key) ? ["A", "B", "C", "D"][Number(event.key) - 1] : null);
+    const optionKey = KEYBOARD_OPTION_MAP[event.code] || (/^[1-4]$/.test(event.key) ? OPTION_KEYS[Number(event.key) - 1] : null);
     if (optionKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
       event.preventDefault();
       answerQuestion(optionKey);
