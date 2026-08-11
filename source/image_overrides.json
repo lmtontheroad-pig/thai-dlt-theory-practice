@@ -1,0 +1,17 @@
+{
+  "SDLT-000041": {
+    "source_id": "SDLT-000216",
+    "option_map": { "A": "A", "B": "B", "C": "C", "D": "D" },
+    "note": "原随机题的4张原图无法从SafeDrive再次正常取得；采用SafeDrive中题干相同、正确答案同为A的完整停车图组。"
+  },
+  "SDLT-000109": {
+    "source_id": "SDLT-000216",
+    "option_map": { "D": "D" },
+    "note": "SafeDrive当前题目DOM未提供D选项图片；D选项采用SafeDrive中题干相同、正确答案同为A的完整题组对应图片。"
+  },
+  "SDLT-000160": {
+    "source_id": "SDLT-000026",
+    "option_map": { "A": "C", "B": "D", "C": "B", "D": "A" },
+    "note": "原2022版图片无法再次取得；采用SafeDrive 2025重绘版同编号32至35图片，并按原题图片编号映射选项。"
+  }
+}

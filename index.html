@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SafeDrive DLT 泰国驾照理论练习</title>
+  <meta name="description" content="完全离线运行的中泰双语泰国驾照理论练习题库">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">SD</div>
+        <div>
+          <div class="brand-name">SafeDrive DLT</div>
+          <div class="brand-subtitle">泰国驾照理论练习</div>
+        </div>
+      </div>
+
+      <div class="sidebar-label">练习方式</div>
+      <nav class="mode-nav" aria-label="练习方式">
+        <button class="nav-button active" data-action="home"><span>⌂</span>学习概览</button>
+        <button class="nav-button" data-mode="sequential"><span>☷</span>顺序练习</button>
+        <button class="nav-button" data-mode="random"><span>⤨</span>随机练习</button>
+        <button class="nav-button exam-button" data-mode="exam"><span>◷</span>50题模拟考试</button>
+        <button class="nav-button" data-mode="wrong"><span>↻</span>错题练习 <b id="wrongBadge">0</b></button>
+        <button class="nav-button" data-mode="favorites"><span>☆</span>收藏题目 <b id="favoriteBadge">0</b></button>
+      </nav>
+
+      <div class="sidebar-label category-label">按分类练习</div>
+      <div class="category-picker">
+        <select id="categorySelect" aria-label="选择题目分类"></select>
+        <button id="startCategory" class="secondary-button">开始分类练习</button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div><span class="status-dot"></span>离线题库已就绪</div>
+        <small><span id="databaseCount">329</span> 道题 · 数据保存在本机</small>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <form id="searchForm" class="search-box" role="search">
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="搜索中文、泰文、题号或选项…" autocomplete="off">
+          <kbd>Enter</kbd>
+        </form>
+        <div class="language-switch" role="group" aria-label="题目语言">
+          <button type="button" data-language="zh" class="active">中文</button>
+          <button type="button" data-language="both">中泰</button>
+          <button type="button" data-language="th">泰文</button>
+        </div>
+      </header>
+
+      <section id="dashboardView" class="dashboard-view">
+        <div class="hero-card">
+          <div>
+            <span class="eyebrow">本地学习题库</span>
+            <h1>把每一道题，练成路上的本能。</h1>
+            <p>329 道 SafeDrive DLT 泰文原题，已合并中文翻译与网站可验证答案。所有功能均可断网使用。</p>
+            <div class="hero-actions">
+              <button class="primary-button" data-mode="sequential">继续顺序练习</button>
+              <button class="ghost-button" data-mode="exam">开始模拟考试</button>
+            </div>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="road-sign">45<span>/50</span></div>
+            <div class="road-line"></div>
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span>已练习</span><strong id="metricPracticed">0</strong><small>道唯一题目</small>
+          </article>
+          <article class="metric-card">
+            <span>累计正确率</span><strong id="metricAccuracy">—</strong><small id="metricAttempts">尚未作答</small>
+          </article>
+          <article class="metric-card warning">
+            <span>当前错题</span><strong id="metricWrong">0</strong><small>可随时集中重练</small>
+          </article>
+          <article class="metric-card">
+            <span>收藏题目</span><strong id="metricFavorites">0</strong><small>建立自己的重点题单</small>
+          </article>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="panel-card progress-card">
+            <div class="panel-heading">
+              <div><span class="eyebrow">学习进度</span><h2>题库覆盖</h2></div>
+              <strong id="coveragePercent">0%</strong>
+            </div>
+            <div class="progress-track"><div id="coverageBar" class="progress-fill"></div></div>
+            <div class="progress-details"><span id="coverageText">0 / 329 已练</span><span id="remainingText">剩余 329 道</span></div>
+            <div class="quick-mode-row">
+              <button data-mode="random"><b>随机练习</b><span>打乱题序，查漏补缺 →</span></button>
+              <button data-mode="wrong"><b>错题回炉</b><span>只练做错的题目 →</span></button>
+            </div>
+          </section>
+
+          <section class="panel-card history-card">
+            <div class="panel-heading"><div><span class="eyebrow">模拟考试</span><h2>最近成绩</h2></div></div>
+            <div id="examHistory" class="empty-state">尚无模拟考试记录</div>
+          </section>
+        </div>
+
+        <section id="searchResultsPanel" class="panel-card search-results-panel hidden">
+          <div class="panel-heading">
+            <div><span class="eyebrow">题库搜索</span><h2 id="searchResultsTitle">搜索结果</h2></div>
+            <button id="closeSearch" class="text-button">关闭</button>
+          </div>
+          <div id="searchResults" class="search-results"></div>
+        </section>
+
+        <div class="data-note">
+          <span>资料说明</span>
+          本题库保留 SafeDrive 泰文原文；有可验证答案的题目才会判断正误。无法重新取得原图的题目采用SafeDrive同题完整图组，并在题目上明确标注。
+        </div>
+      </section>
+
+      <section id="quizView" class="quiz-layout hidden">
+        <div class="quiz-column">
+          <div class="session-header">
+            <button id="backHome" class="back-button" type="button">← 返回概览</button>
+            <div class="session-title-wrap">
+              <span id="sessionMode" class="eyebrow">顺序练习</span>
+              <strong id="sessionTitle">全部题目</strong>
+            </div>
+            <div id="examTimer" class="exam-timer hidden">60:00</div>
+          </div>
+          <div class="session-progress"><div id="sessionProgressBar"></div></div>
+
+          <article id="questionCard" class="question-card">
+            <div class="question-meta">
+              <div><span id="questionPosition">第 1 / 329 题</span><span id="questionId">SDLT-000001</span></div>
+              <button id="favoriteButton" class="favorite-button" type="button" aria-label="收藏本题">☆ 收藏</button>
+            </div>
+            <div class="category-row">
+              <span id="categoryZh" class="category-chip"></span>
+              <span id="imageWarning" class="image-warning hidden">部分原图未取得</span>
+            </div>
+            <h1 id="questionZh" class="question-title"></h1>
+            <div id="questionThaiBlock" class="thai-block hidden">
+              <span>泰文原题</span>
+              <p id="questionTh"></p>
+            </div>
+            <button id="showOriginal" class="text-button original-button" type="button">显示泰文原文</button>
+            <div id="questionImages" class="question-images"></div>
+            <div id="optionsList" class="options-list" role="radiogroup" aria-label="答案选项"></div>
+            <div id="feedback" class="feedback hidden" aria-live="polite"></div>
+            <div class="question-controls">
+              <button id="prevQuestion" class="ghost-button" type="button">上一题</button>
+              <span id="answeredHint">请选择一个答案</span>
+              <button id="nextQuestion" class="primary-button" type="button">下一题</button>
+              <button id="finishExam" class="primary-button danger hidden" type="button">提交试卷</button>
+            </div>
+          </article>
+        </div>
+
+        <aside class="study-rail">
+          <section class="rail-card">
+            <span class="eyebrow">本次练习</span>
+            <div class="session-stats">
+              <div><strong id="sessionAnswered">0</strong><span>已答</span></div>
+              <div><strong id="sessionCorrect">0</strong><span>正确</span></div>
+              <div><strong id="sessionAccuracy">—</strong><span>正确率</span></div>
+            </div>
+          </section>
+          <section id="examNavigatorCard" class="rail-card hidden">
+            <div class="rail-heading"><strong>答题卡</strong><span id="examAnsweredCount">0 / 50</span></div>
+            <div id="examNavigator" class="exam-navigator"></div>
+          </section>
+          <section class="rail-card tip-card">
+            <span class="eyebrow">使用提示</span>
+            <p id="modeTip">作答后立即显示 SafeDrive 可验证的标准答案。</p>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="imageDialog" class="image-dialog">
+    <button id="closeImageDialog" type="button" aria-label="关闭图片">×</button>
+    <img id="dialogImage" alt="题目图片放大查看">
+  </dialog>
+
+  <dialog id="examResultDialog" class="result-dialog">
+    <div class="result-icon" id="resultIcon">✓</div>
+    <span class="eyebrow">模拟考试结果</span>
+    <h2 id="resultTitle">考试完成</h2>
+    <div class="result-score"><strong id="resultScore">0</strong><span>/ 50</span></div>
+    <p id="resultSummary"></p>
+    <div class="result-breakdown">
+      <div><strong id="resultCorrect">0</strong><span>正确</span></div>
+      <div><strong id="resultWrong">0</strong><span>错误</span></div>
+      <div><strong id="resultUnanswered">0</strong><span>未答</span></div>
+    </div>
+    <div class="dialog-actions">
+      <button id="reviewExam" class="ghost-button" type="button">回顾错题</button>
+      <button id="closeResult" class="primary-button" type="button">返回概览</button>
+    </div>
+  </dialog>
+
+  <script src="data/questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

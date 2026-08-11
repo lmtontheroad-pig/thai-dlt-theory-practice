@@ -1,0 +1,12 @@
+{
+  "name": "thai-dlt-theory-practice",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Offline Chinese-Thai SafeDrive DLT driving theory practice website",
+  "scripts": {
+    "build": "node scripts/build-data.mjs",
+    "test": "node --check app.js && node --check scripts/build-data.mjs && node scripts/validate.mjs",
+    "serve": "python -m http.server 8765"
+  }
+}
