@@ -1,13 +1,17 @@
 @echo off
-chcp 65001 >nul
+setlocal
 cd /d "%~dp0"
-where node >nul 2>nul
-if errorlevel 1 (
-  echo 未找到 Node.js。请先安装 Node.js 18 或更高版本。
-  pause
-  exit /b 1
-)
-echo 正在启动 SafeDrive DLT 本地题库……
-node scripts\local-server.mjs
-if errorlevel 1 pause
+where.exe node.exe >nul 2>nul
+if errorlevel 1 goto missing_node
 
+echo Starting SafeDrive DLT local practice...
+node.exe scripts\local-server.mjs %*
+set "sdlt_exit_code=%errorlevel%"
+if not "%sdlt_exit_code%"=="0" pause
+exit /b %sdlt_exit_code%
+
+:missing_node
+echo Node.js 18 or newer is required.
+echo Download it from https://nodejs.org/ and run this file again.
+pause
+exit /b 1

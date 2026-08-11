@@ -47,6 +47,7 @@ const missingFeatures = featureTokens.filter((token) => !app.includes(token) && 
 const feedbackTokens = ["/api/feedback", "issueQuestionId", "feedback/issues.json", "local-server.mjs"];
 const feedbackSurface = `${html}\n${app}\n${localServer}\n${startScript}`;
 const missingFeedbackFeatures = feedbackTokens.filter((token) => !feedbackSurface.includes(token));
+const startScriptAsciiOnly = !/[^\x00-\x7F]/.test(startScript);
 const runtimeNetworkRefs = [...`${html}\n${css}\n${app}`.matchAll(/https?:\/\//g)].length;
 const translationMismatches = data.questions.filter((question) => {
   const translated = translationById.get(question.id);
@@ -73,6 +74,7 @@ const result = {
   missing_js_selectors: missingSelectors.length,
   missing_feature_tokens: missingFeatures,
   missing_feedback_tokens: missingFeedbackFeatures,
+  start_script_ascii_only: startScriptAsciiOnly,
   runtime_network_refs: runtimeNetworkRefs,
   translation_mismatches: translationMismatches.length,
   image_only_option_gaps: imageOnlyOptionGaps.length,
@@ -88,6 +90,7 @@ const failed = result.questions !== 329
   || result.missing_js_selectors > 0
   || result.missing_feature_tokens.length > 0
   || result.missing_feedback_tokens.length > 0
+  || !result.start_script_ascii_only
   || result.runtime_network_refs > 0
   || result.translation_mismatches > 0
   || result.image_only_option_gaps > 0;
