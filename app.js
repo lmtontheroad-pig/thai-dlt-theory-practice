@@ -16,6 +16,10 @@
     content: "题目或选项内容问题",
     other: "其他问题",
   };
+  const KEYBOARD_OPTION_MAP = {
+    Digit1: "A", Digit2: "B", Digit3: "C", Digit4: "D",
+    Numpad1: "A", Numpad2: "B", Numpad3: "C", Numpad4: "D",
+  };
   const questions = database.questions;
   const questionById = new Map(questions.map((question) => [question.id, question]));
   const allIds = questions.map((question) => question.id);
@@ -502,7 +506,7 @@
     elements.favoriteButton.textContent = store.favorites.includes(id) ? "★ 已收藏" : "☆ 收藏";
 
     elements.questionImages.replaceChildren(...(question.question_images || []).map((path, index) => createImage(path, `${question.id} 题目图片 ${index + 1}`)));
-    elements.optionsList.replaceChildren(...question.options.map((option) => {
+    elements.optionsList.replaceChildren(...question.options.map((option, optionIndex) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "option-button";
@@ -520,7 +524,12 @@
 
       const key = document.createElement("span");
       key.className = "option-key";
-      key.textContent = option.key;
+      key.append(document.createTextNode(option.key));
+      const shortcut = document.createElement("small");
+      shortcut.className = "option-shortcut";
+      shortcut.textContent = String(optionIndex + 1);
+      shortcut.title = `小键盘 ${optionIndex + 1}`;
+      key.append(shortcut);
       const content = document.createElement("span");
       content.className = "option-text";
       if (language === "th") {
@@ -552,7 +561,7 @@
     elements.finishExam.classList.toggle("hidden", !session.exam);
     elements.examTimer.classList.toggle("hidden", !session.exam);
     elements.examNavigatorCard.classList.toggle("hidden", !session.exam);
-    elements.modeTip.textContent = session.exam ? "模拟考试期间只保存选择，不显示正误；提交后统一评分并生成错题回顾。" : "作答后立即显示 SafeDrive 可验证的标准答案。";
+    elements.modeTip.textContent = session.exam ? "模拟考试期间只保存选择，不显示正误。键盘 1/2/3/4 对应 A/B/C/D。" : "作答后立即显示标准答案。键盘 1/2/3/4 对应 A/B/C/D。";
     updateSessionStats();
     if (session.exam) renderExamNavigator();
   }
@@ -827,9 +836,11 @@
   window.addEventListener("keydown", (event) => {
     if (!session || elements.imageDialog.open || elements.resultDialog.open || elements.issueDialog.open) return;
     if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-    if (/^[1-4]$/.test(event.key)) {
-      const key = ["A", "B", "C", "D"][Number(event.key) - 1];
-      answerQuestion(key);
+    const optionKey = KEYBOARD_OPTION_MAP[event.code] || (/^[1-4]$/.test(event.key) ? ["A", "B", "C", "D"][Number(event.key) - 1] : null);
+    if (optionKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      event.preventDefault();
+      answerQuestion(optionKey);
+      return;
     }
     if (event.key === "ArrowLeft") navigateQuestion(-1);
     if (event.key === "ArrowRight") navigateQuestion(1);
